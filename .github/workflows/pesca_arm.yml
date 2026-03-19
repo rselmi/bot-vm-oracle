@@ -1,7 +1,7 @@
 name: OCI ARM Fisher
 on:
   schedule:
-    - cron: '*/15 * * * *'
+    - cron: '*/5 * * * *'
   workflow_dispatch:
 
 jobs:
@@ -13,29 +13,22 @@ jobs:
           pip install oci-cli
           mkdir -p ~/.oci
 
-      - name: Configure OCI CLI
+      - name: Try to Launch ARM Instance (High Frequency)
         run: |
-          echo "[DEFAULT]" > ~/.oci/config
-          echo "user=${{ secrets.OCI_USER_OCID }}" >> ~/.oci/config
-          echo "fingerprint=${{ secrets.OCI_FINGERPRINT }}" >> ~/.oci/config
-          echo "tenancy=${{ secrets.OCI_TENANCY_OCID }}" >> ~/.oci/config
-          echo "region=${{ secrets.OCI_REGION }}" >> ~/.oci/config
-          echo "key_file=~/.oci/key.pem" >> ~/.oci/config
-          
-          # Decodifica a chave privada que você salvou em Base64
-          echo "${{ secrets.OCI_PRIVATE_KEY }}" | base64 -d > ~/.oci/key.pem
-          chmod 600 ~/.oci/key.pem
-
-      - name: Try to Launch ARM Instance
-        run: |
-          oci compute instance launch \
-            --compartment-id "${{ secrets.OCI_TENANCY_OCID }}" \
-            --availability-domain "IQFJ:SA-VINHEDO-1-AD-1" \
-            --shape "VM.Standard.A1.Flex" \
-            --image-id "${{ secrets.OCI_IMAGE_ID }}" \
-            --subnet-id "${{ secrets.OCI_SUBNET_ID }}" \
-            --shape-config '{"ocpus": 4, "memoryInGBs": 24}' \
-            --assign-public-ip true \
-            --display-name "Ollama-Server-Prod" \
-            --ssh-authorized-keys-file <(echo "${{ secrets.SSH_PUBLIC_KEY }}") \
-            || echo "Sem capacidade no momento em Vinhedo. Tentando no próximo ciclo."
+          for i in 1 2 3; do
+            echo "--- Tentativa $i de 3 ---"
+            oci compute instance launch \
+              --compartment-id "${{ secrets.OCI_TENANCY_OCID }}" \
+              --availability-domain "IQFJ:SA-VINHEDO-1-AD-1" \
+              --shape "VM.Standard.A1.Flex" \
+              --image-id "${{ secrets.OCI_IMAGE_ID }}" \
+              --subnet-id "${{ secrets.OCI_SUBNET_ID }}" \
+              --shape-config '{"ocpus": 4, "memoryInGBs": 24}' \
+              --assign-public-ip true \
+              --display-name "Ollama-Server-Prod" \
+              --ssh-authorized-keys-file <(echo "${{ secrets.SSH_PUBLIC_KEY }}") && { echo "!!! SUCESSO !!! VM CRIADA."; exit 0; }
+            
+            echo "Sem capacidade. Esperando 20s para a próxima tentativa..."
+            sleep 20
+          done
+          echo "Fim do ciclo de 5 minutos. O GitHub Actions tentará novamente em breve."
