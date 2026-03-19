@@ -1,1 +1,9 @@
-
+- name: Setup OCI CLI
+        uses: oracle-actions/setup-oci-cli@v1.3.2
+        with:
+          user_ocid: ${{ secrets.OCI_USER_OCID }}
+          tenancy_ocid: ${{ secrets.OCI_TENANCY_OCID }}
+          fingerprint: ${{ secrets.OCI_FINGERPRINT }}
+          region: ${{ secrets.OCI_REGION }}
+          # O segredo está aqui: o echo + base -d reconstrói a chave original para a Oracle
+          private_key: ${{ secrets.OCI_PRIVATE_KEY }}
