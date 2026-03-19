@@ -8,9 +8,15 @@ jobs:
   launch-instance:
     runs-on: ubuntu-latest
     steps:
+      - name: Install OCI CLI
+        run: |
+          pip install oci-cli
+          # Esta linha abaixo é a "mágica" que resolve o comando não encontrado
+          echo "$HOME/.local/bin" >> $GITHUB_PATH
+          mkdir -p ~/.oci
+
       - name: Configure OCI CLI
         run: |
-          mkdir -p ~/.oci
           echo "[DEFAULT]" > ~/.oci/config
           echo "user=${{ secrets.OCI_USER_OCID }}" >> ~/.oci/config
           echo "fingerprint=${{ secrets.OCI_FINGERPRINT }}" >> ~/.oci/config
@@ -18,19 +24,16 @@ jobs:
           echo "region=${{ secrets.OCI_REGION }}" >> ~/.oci/config
           echo "key_file=/home/runner/.oci/key.pem" >> ~/.oci/config
           
-          # Decodifica a chave
           echo "${{ secrets.OCI_PRIVATE_KEY }}" | base64 -d > /home/runner/.oci/key.pem
           chmod 600 /home/runner/.oci/key.pem
-          chmod 600 /home/runner/.oci/config
-          
+
       - name: Try to Launch ARM Instance (High Frequency)
         run: |
           for i in 1 2 3; do
             echo "--- Tentativa $i de 3 ---"
             
-            # Usando o caminho completo do executável (~/.local/bin/oci)
-            ~/.local/bin/oci compute instance launch \
-              --config-file /home/runner/.oci/config \
+            # Agora podemos usar apenas 'oci' novamente
+            oci compute instance launch \
               --compartment-id "${{ secrets.OCI_TENANCY_OCID }}" \
               --availability-domain "IQFJ:SA-VINHEDO-1-AD-1" \
               --shape "VM.Standard.A1.Flex" \
@@ -41,6 +44,6 @@ jobs:
               --display-name "Ollama-Server-Prod" \
               --ssh-authorized-keys-file <(echo "${{ secrets.SSH_PUBLIC_KEY }}") && { echo "!!! SUCESSO !!! VM CRIADA."; exit 0; }
             
-            echo "Sem capacidade. Esperando 20s..."
+            echo "Sem capacidade em Vinhedo. Esperando 20s..."
             sleep 20
           done
