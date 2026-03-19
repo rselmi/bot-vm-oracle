@@ -28,8 +28,8 @@ jobs:
           for i in 1 2 3; do
             echo "--- Tentativa $i de 3 ---"
             
-            # Rodando o comando com o caminho explícito do config
-            oci compute instance launch \
+            # Usando o caminho completo do executável (~/.local/bin/oci)
+            ~/.local/bin/oci compute instance launch \
               --config-file /home/runner/.oci/config \
               --compartment-id "${{ secrets.OCI_TENANCY_OCID }}" \
               --availability-domain "IQFJ:SA-VINHEDO-1-AD-1" \
