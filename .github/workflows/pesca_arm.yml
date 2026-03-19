@@ -8,16 +8,29 @@ jobs:
   launch-instance:
     runs-on: ubuntu-latest
     steps:
-      - name: Install OCI CLI
+      - name: Configure OCI CLI
         run: |
-          pip install oci-cli
           mkdir -p ~/.oci
-
+          echo "[DEFAULT]" > ~/.oci/config
+          echo "user=${{ secrets.OCI_USER_OCID }}" >> ~/.oci/config
+          echo "fingerprint=${{ secrets.OCI_FINGERPRINT }}" >> ~/.oci/config
+          echo "tenancy=${{ secrets.OCI_TENANCY_OCID }}" >> ~/.oci/config
+          echo "region=${{ secrets.OCI_REGION }}" >> ~/.oci/config
+          echo "key_file=/home/runner/.oci/key.pem" >> ~/.oci/config
+          
+          # Decodifica a chave
+          echo "${{ secrets.OCI_PRIVATE_KEY }}" | base64 -d > /home/runner/.oci/key.pem
+          chmod 600 /home/runner/.oci/key.pem
+          chmod 600 /home/runner/.oci/config
+          
       - name: Try to Launch ARM Instance (High Frequency)
         run: |
           for i in 1 2 3; do
             echo "--- Tentativa $i de 3 ---"
+            
+            # Rodando o comando com o caminho explícito do config
             oci compute instance launch \
+              --config-file /home/runner/.oci/config \
               --compartment-id "${{ secrets.OCI_TENANCY_OCID }}" \
               --availability-domain "IQFJ:SA-VINHEDO-1-AD-1" \
               --shape "VM.Standard.A1.Flex" \
@@ -28,7 +41,6 @@ jobs:
               --display-name "Ollama-Server-Prod" \
               --ssh-authorized-keys-file <(echo "${{ secrets.SSH_PUBLIC_KEY }}") && { echo "!!! SUCESSO !!! VM CRIADA."; exit 0; }
             
-            echo "Sem capacidade. Esperando 20s para a próxima tentativa..."
+            echo "Sem capacidade. Esperando 20s..."
             sleep 20
           done
-          echo "Fim do ciclo de 5 minutos. O GitHub Actions tentará novamente em breve."
