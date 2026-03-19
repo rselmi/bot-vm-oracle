@@ -29,6 +29,7 @@ jobs:
 
       - name: Try to Launch ARM Instance (High Frequency)
         run: |
+          export OCI_CLI_SUPPRESS_FILE_PERMISSIONS_WARNING=True
           for i in 1 2 3; do
             echo "--- Tentativa $i de 3 ---"
             
