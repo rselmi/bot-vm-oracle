@@ -1,9 +1,32 @@
-- name: Setup OCI CLI
+name: OCI ARM Fisher
+on:
+  schedule:
+    - cron: '*/15 * * * *'
+  workflow_dispatch:
+
+jobs:
+  launch-instance:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Setup OCI CLI
         uses: oracle-actions/setup-oci-cli@v1.3.2
         with:
           user_ocid: ${{ secrets.OCI_USER_OCID }}
           tenancy_ocid: ${{ secrets.OCI_TENANCY_OCID }}
           fingerprint: ${{ secrets.OCI_FINGERPRINT }}
           region: ${{ secrets.OCI_REGION }}
-          # O segredo está aqui: o echo + base -d reconstrói a chave original para a Oracle
           private_key: ${{ secrets.OCI_PRIVATE_KEY }}
+
+      - name: Try to Launch ARM Instance
+        run: |
+          oci compute instance launch \
+            --compartment-id "${{ secrets.OCI_TENANCY_OCID }}" \
+            --availability-domain "IQFJ:SA-VINHEDO-1-AD-1" \
+            --shape "VM.Standard.A1.Flex" \
+            --image-id "${{ secrets.OCI_IMAGE_ID }}" \
+            --subnet-id "${{ secrets.OCI_SUBNET_ID }}" \
+            --shape-config '{"ocpus": 4, "memoryInGBs": 24}' \
+            --assign-public-ip true \
+            --display-name "Ollama-Server-Prod" \
+            --ssh-authorized-keys-file <(echo "${{ secrets.SSH_PUBLIC_KEY }}") \
+            || echo "Sem capacidade no momento. Tentando novamente no próximo ciclo."
